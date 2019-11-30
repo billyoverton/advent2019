@@ -6,7 +6,6 @@ def min_max(l):
 
 def init_grid(height, width, fill=None):
     grid = [[]] * (height)
-    print(grid)
     for y in range(height):
         grid[y] = [fill]*width
     return grid
