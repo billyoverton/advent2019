@@ -3,6 +3,8 @@ import sys
 import logging
 from timeit import default_timer as timer
 
+import util
+
 LOG_LEVEL = logging.INFO
 
 def main(input_file):
