@@ -16,6 +16,43 @@ def pretty_grid(array, xsep="", ysep="\n"):
         string_list.append(xsep.join([str(i) for i in y]))
     return ysep.join(string_list)
 
+def between(x, a, b):
+    return (a <= x <= b) or (b <= x <= a)
+
+def to_unit_vector(vector):
+    unit = []
+    magnitude = math.sqrt( sum([x**2 for x in vector]) )
+    for x in vector:
+        unit.append(x/magnitude)
+    return unit
+
+class Point(object):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    @staticmethod
+    def from_iterable(point):
+        return Point(point[0], point[1])
+
+    def distance(self, other):
+        return math.sqrt( (self.x - other.x)**2 + (self.y - other.y)**2 )
+
+    def manhattan_distance(self, other):
+        return abs(self.x - other.x) + abs(self.y - other.y)
+
+    def to_tuple(self):
+        return (self.x, self.y)
+
+    def __eq__(self, other):
+        if isinstance(other, Point):
+            return self.x == other.x and self.y == other.y
+        else:
+            return False
+
+    def __str__(self):
+        return "({0},{1})".format(self.x, self.y)
+
 class Graph(object):
 
     def __init__(self):
