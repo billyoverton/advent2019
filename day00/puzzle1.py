@@ -18,7 +18,7 @@ def main(input_file):
 
 if __name__ == "__main__":
 
-    logging.basicConfig(format='%(levelname)s: %(message)s', level=LOG_LEVEL)
+    logging.basicConfig(format='%(levelname)s:%(module)s: %(message)s', level=LOG_LEVEL)
 
     if len(sys.argv) < 2:
         logging.critical("Missing input file")
