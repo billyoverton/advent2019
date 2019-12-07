@@ -1,6 +1,11 @@
 import util
-
 class SantaInteropt(object):
+
+    STATE_HALTED = 0
+    STATE_WAITING_FOR_INPUT = 1
+    STATE_READY = 2
+    STATE_RUNNING = 3
+    STATE_OUT_OF_MEMORY = 4
 
     def __init__(self, memory=None, input_buffer=None):
         if memory is None:
@@ -15,6 +20,10 @@ class SantaInteropt(object):
         else:
             self.input_buffer = input_buffer
 
+        self.output_buffer = []
+
+        self.state = self.STATE_READY
+
     @property
     def memory(self):
         return self._memory
@@ -22,19 +31,26 @@ class SantaInteropt(object):
     @memory.setter
     def memory(self, memory):
         self._memory = memory
-        self._original_memory = memory
+        self._original_memory = [x for x in memory]
+        self.reset()
 
     def reset(self):
-        self.memory = self._original_memory
+        self._memory = [x for x in self._original_memory]
         self.instruction_pointer = 0
+        self.input_buffer = []
+        self.output_buffer = []
+        self.state = self.STATE_READY
+
+    def input(self, value):
+        self.input_buffer.append(value)
 
     def _get_input(self):
         if len(self.input_buffer) > 0:
-            return self.input_buffer.pop(0)
+            val = self.input_buffer.pop(0)
+            return val
         else:
-            print("Computer: Not enough inputs in the input buffer")
-            print("Computer Input: ", end="")
-            return int(input())
+            self.state = self.STATE_WAITING_FOR_INPUT
+            return None
 
     def _execute_opt(self, opt_code):
 
@@ -59,6 +75,8 @@ class SantaInteropt(object):
             self._opt_7(param_modes)
         elif opt_code == 8:
             self._opt_8(param_modes)
+        elif opt_code == 99:
+            self.state = self.STATE_HALTED
 
     def _get_value(self, input, opt_mode):
         if opt_mode == 0:
@@ -91,14 +109,18 @@ class SantaInteropt(object):
         self.instruction_pointer += 1
         val = self._get_input()
 
-        self.memory[dest] = val
+        if val is None:
+            # We are waiting for input so reset us back
+            self.instruction_pointer += -1
+        else:
+            self.memory[dest] = val
 
     # Output operator
     def _opt_4(self, param_modes):
         param1 = self._get_value(self.memory[self.instruction_pointer], param_modes[0])
         self.instruction_pointer += 1
 
-        print(f"Computer Output: {param1}")
+        self.output_buffer.append(param1)
 
     # Jump-if-true operator
     def _opt_5(self, param_modes):
@@ -130,27 +152,24 @@ class SantaInteropt(object):
         else:
             self.memory[param3] = 0
 
-    # equals than operator
+    # equals operator
     def _opt_8(self, param_modes):
         param1 = self._get_value(self.memory[self.instruction_pointer], param_modes[0])
         param2 = self._get_value(self.memory[self.instruction_pointer+1], param_modes[1])
         param3 = self.memory[self.instruction_pointer+2]
         self.instruction_pointer += 3
-        
+
         if param1 == param2:
             self.memory[param3] = 1
         else:
             self.memory[param3] = 0
 
     def execute(self):
-        opt_code = self.memory[self.instruction_pointer]
-        self.instruction_pointer += 1
+        self.state = self.STATE_RUNNING
 
-        while opt_code != 99:
+        while self.state == self.STATE_RUNNING:
+            opt_code = self.memory[self.instruction_pointer]
+            self.instruction_pointer += 1
             self._execute_opt(opt_code)
-            if len(self.memory) > self.instruction_pointer:
-                # read the new opt code
-                opt_code = self.memory[self.instruction_pointer]
-                self.instruction_pointer += 1
-            else:
-                break
+            if self.state in [self.STATE_WAITING_FOR_INPUT]:
+                self.instruction_pointer += -1
