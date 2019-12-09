@@ -1,4 +1,33 @@
 import util
+import collections
+
+class SantaInteroptMemory(object):
+
+    def __init__(self, iterable=None):
+
+        self._internal = {}
+
+        if iterable is not None:
+            for i in range(len(iterable)):
+                self._internal[i] = iterable[i]
+
+    def __getitem__(self, key):
+        if key in self._internal:
+            return self._internal[key]
+        else:
+            return 0
+
+    def __setitem__(self, key, value):
+        self._internal[key] = value
+
+    def __delitem__(self, key):
+        if key in self._internal:
+            del(self._internal[key])
+
+    def __str__(self):
+        max_written = max(self._internal.keys())
+        return ",".join([str(self.__getitem__(i)) for i in range(max_written+1)])
+
 class SantaInteropt(object):
 
     STATE_HALTED = 0
@@ -23,6 +52,7 @@ class SantaInteropt(object):
         self.output_buffer = []
 
         self.state = self.STATE_READY
+        self.relative_base = 0
 
     @property
     def memory(self):
@@ -30,16 +60,17 @@ class SantaInteropt(object):
 
     @memory.setter
     def memory(self, memory):
-        self._memory = memory
+        self._memory = SantaInteroptMemory(memory)
         self._original_memory = [x for x in memory]
         self.reset()
 
     def reset(self):
-        self._memory = [x for x in self._original_memory]
+        self._memory = SantaInteroptMemory(self._original_memory)
         self.instruction_pointer = 0
         self.input_buffer = []
         self.output_buffer = []
         self.state = self.STATE_READY
+        self.relative_base = 0
 
     def input(self, value):
         self.input_buffer.append(value)
@@ -75,6 +106,8 @@ class SantaInteropt(object):
             self._opt_7(param_modes)
         elif opt_code == 8:
             self._opt_8(param_modes)
+        elif opt_code == 9:
+            self._opt_9(param_modes)
         elif opt_code == 99:
             self.state = self.STATE_HALTED
 
@@ -83,6 +116,16 @@ class SantaInteropt(object):
             return self.memory[input]
         if opt_mode == 1:
             return input
+        if opt_mode == 2:
+            return self.memory[input + self.relative_base]
+
+    def _write_value(self, value, input, opt_mode):
+        if opt_mode == 0:
+            self.memory[input] = value
+        if opt_mode == 1:
+            logging.INFO("INVALID OPT MODE FOR WRITE")
+        if opt_mode == 2:
+            self.memory[input + self.relative_base] = value
 
     # Add operator
     def _opt_1(self, param_modes):
@@ -92,7 +135,7 @@ class SantaInteropt(object):
         dest = self.memory[self.instruction_pointer+2]
         self.instruction_pointer += 3
 
-        self.memory[dest] = param1 + param2
+        self._write_value(param1 + param2, dest, param_modes[2])
 
     # Multiply operator
     def _opt_2(self, param_modes):
@@ -101,7 +144,7 @@ class SantaInteropt(object):
         dest = self.memory[self.instruction_pointer+2]
         self.instruction_pointer += 3
 
-        self.memory[dest] = param1 * param2
+        self._write_value(param1 * param2, dest, param_modes[2])
 
     # Input operator
     def _opt_3(self, param_modes):
@@ -113,7 +156,7 @@ class SantaInteropt(object):
             # We are waiting for input so reset us back
             self.instruction_pointer += -1
         else:
-            self.memory[dest] = val
+            self._write_value(val, dest, param_modes[0])
 
     # Output operator
     def _opt_4(self, param_modes):
@@ -148,9 +191,9 @@ class SantaInteropt(object):
         self.instruction_pointer += 3
 
         if param1 < param2:
-            self.memory[param3] = 1
+            self._write_value(1, param3, param_modes[2])
         else:
-            self.memory[param3] = 0
+            self._write_value(0, param3, param_modes[2])
 
     # equals operator
     def _opt_8(self, param_modes):
@@ -160,9 +203,15 @@ class SantaInteropt(object):
         self.instruction_pointer += 3
 
         if param1 == param2:
-            self.memory[param3] = 1
+            self._write_value(1, param3, param_modes[2])
         else:
-            self.memory[param3] = 0
+            self._write_value(0, param3, param_modes[2])
+
+    def _opt_9(self, param_modes):
+        param1 = self._get_value(self.memory[self.instruction_pointer], param_modes[0])
+        self.instruction_pointer += 1
+
+        self.relative_base += param1
 
     def execute(self):
         self.state = self.STATE_RUNNING
