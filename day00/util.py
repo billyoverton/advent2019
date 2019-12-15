@@ -7,7 +7,7 @@ def min_max(l):
 # From https://stackoverflow.com/a/39644726
 def get_digit(number, n):
     return number // 10**n % 10
-    
+
 def init_grid(height, width, fill=None):
     grid = [[]] * (height)
     for y in range(height):
@@ -56,6 +56,9 @@ class Point(object):
 
     def __str__(self):
         return "({0},{1})".format(self.x, self.y)
+
+    def __hash__(self):
+        return self.__str__().__hash__()
 
 class Graph(object):
 
