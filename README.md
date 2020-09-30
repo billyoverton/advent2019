@@ -1,6 +1,7 @@
 # 2019 Advent of Code
 
 My solutions for the [2019 Advent of Code](https://adventofcode.com/2019).
+The 2019_original_attempt folder holds my original attempt during the advent. The 2020_retry folder is my much later attempt to complete everything.
 
 ## Folder layout
 
